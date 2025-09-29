@@ -86,7 +86,7 @@ def count_query_by_dns_server():
     results = c.fetchall()
     print("[+] DNS Server Query Counts:")
     for row in results:
-        print(f"    {row[0]}: {row[1]} times")
+        print(f"    {row[0]}: \t{row[1]} times")
     print("-" * 50)
     local_conn.close()
 
