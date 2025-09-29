@@ -67,7 +67,7 @@ def packet_callback(packet):
                 detected = chardet.detect(packet[DNSQR].qname)
                 charset = detected['encoding'] if detected['encoding'] else 'utf-8'
                 print(f"[*] Detected charset: {charset}")
-            query_name = str(packet[DNSQR].qname.decode())
+            query_name = str(packet[DNSQR].qname.decode(charset))
             # 获取查询类型
             query_type = str(packet[DNSQR].qtype)
             # 获取源IP和目标IP
