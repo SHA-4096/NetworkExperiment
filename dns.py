@@ -55,7 +55,7 @@ def count_query_by_dns_server():
 
 def packet_callback(packet):
     # 检查包是否包含DNS层
-    if packet.haslayer(DNS): # and packet.haslayer(DNSQR):
+    if packet.haslayer(DNS) and packet.haslayer(DNSQR):
     # 确保这是一个DNS查询
         if packet[DNS].qr == 0:  # qr=0表示这是一个查询
             # 获取查询的域名
