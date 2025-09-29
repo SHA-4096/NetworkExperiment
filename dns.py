@@ -1,15 +1,34 @@
+import time
 from scapy.all import *
 from scapy.layers.dns import DNS, DNSQR
 import sys
 import sqlite3
 import chardet
+import threading
 
 charset = None
+global_conn = None
+begin_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+db_name = f"{begin_time}_dns_queries.db"
+
+capture_notification_interval = 2  # 每隔10秒输出一次统计信息
+
+# ================ 信息输出部分 =================
+# 单独开一个线程每隔一段时间输出统计信息
+def thr_periodic_notification():
+    while True:
+        time.sleep(capture_notification_interval)
+        print(f"[*] Time: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}")
+        count_query_by_dns_server()
+
+def periodic_notification():
+    thread = threading.Thread(target=thr_periodic_notification, daemon=True)
+    thread.start()
 
 # ================= 数据存储部分 =================
 
 def init_db():
-    conn = sqlite3.connect('dns_queries.db')
+    conn = sqlite3.connect(db_name)
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS dns_queries (
@@ -23,23 +42,37 @@ def init_db():
     conn.commit()
     conn.close()
 
+def open_connection():
+    global global_conn
+    print("[*] Opening database connection...")
+    if global_conn is None:
+        global_conn = sqlite3.connect(db_name)
+    print("[*] Database connection opened.")
+
+def close_connection():
+    global global_conn
+    print("[*] Closing database connection...")
+    if global_conn is not None:
+        global_conn.close()
+        global_conn = None
+    print("[*] Database connection closed.")
 
 def store_query(src_ip_in, dst_ip_in, query_type_in):
-    print("[*] Storing query in database...")
-    conn = sqlite3.connect('dns_queries.db')
-    c = conn.cursor()
+    # print("[*] Storing query in database...")
+    global global_conn
+    c = global_conn.cursor()
     c.execute(f'''
         INSERT INTO dns_queries (src_ip, dst_ip, query_type)
         VALUES (?, ?, ?)
     ''', (src_ip_in, dst_ip_in,  query_type_in))
-    conn.commit()
-    print("[*] Query stored successfully.")
-    conn.close()
+    global_conn.commit()
+    # print("[*] Query stored successfully.")
 
 def count_query_by_dns_server():
     # 统计每个DNS服务器的查询次数，从高到低排序并输出
-    conn = sqlite3.connect('dns_queries.db')
-    c = conn.cursor()
+    # 单独进程，新建个连接
+    local_conn = sqlite3.connect(db_name)
+    c = local_conn.cursor()
     c.execute('''
         SELECT dst_ip, COUNT(*) as count
         FROM dns_queries
@@ -47,11 +80,11 @@ def count_query_by_dns_server():
         ORDER BY count DESC
     ''')
     results = c.fetchall()
-    conn.close()
-    print("\n[+] DNS Server Query Counts:")
+    print("[+] DNS Server Query Counts:")
     for row in results:
         print(f"    {row[0]}: {row[1]} times")
     print("-" * 50)
+    local_conn.close()
 
 # ================= 数据包处理部分 =================
 
@@ -66,15 +99,8 @@ def packet_callback(packet):
             # 获取源IP和目标IP
             src_ip = str(packet[IP].src)
             dst_ip = str(packet[IP].dst)
-
-            print(f"[*] DNS Query:")
-            print(f"    Source IP: {src_ip}")
-            print(f"    Destination IP: {dst_ip}")
-            print(f"    Query Type: {query_type}")
-            print("-" * 50)
             # 存储查询到数据库并统计
             store_query(src_ip, dst_ip, query_type)
-            count_query_by_dns_server()
 
 def main():
     if len(sys.argv) != 2:
@@ -97,6 +123,16 @@ def main():
     except Exception as e:
         print(f"\n[!] Error: {e}")
 
+# 在接收到程序终止信号时关闭数据库连接
+    finally:
+        close_connection()
+        print("[*] DNS capture stopped.")
+        print(f"[*] Begin time(local): {begin_time} | End time(local): {time.strftime('%Y%m%d_%H%M%S', time.localtime())}")
+        print(f"[*] Database file: {db_name}")
+        count_query_by_dns_server()
+
 if __name__ == "__main__":
     init_db()
+    open_connection()
+    periodic_notification()
     main()
