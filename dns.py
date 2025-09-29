@@ -2,6 +2,9 @@ from scapy.all import *
 from scapy.layers.dns import DNS, DNSQR
 import sys
 import sqlite3
+import chardet
+
+charset = None
 
 # ================= 数据存储部分 =================
 
@@ -54,11 +57,16 @@ def count_query_by_dns_server():
 # ================= 数据包处理部分 =================
 
 def packet_callback(packet):
+    global charset
     # 检查包是否包含DNS层
     if packet.haslayer(DNS) and packet.haslayer(DNSQR):
     # 确保这是一个DNS查询
         if packet[DNS].qr == 0:  # qr=0表示这是一个查询
             # 获取查询的域名
+            if charset is None:
+                detected = chardet.detect(packet[DNSQR].qname)
+                charset = detected['encoding'] if detected['encoding'] else 'utf-8'
+                print(f"[*] Detected charset: {charset}")
             query_name = str(packet[DNSQR].qname.decode())
             # 获取查询类型
             query_type = str(packet[DNSQR].qtype)
