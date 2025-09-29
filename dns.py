@@ -5,19 +5,22 @@ import sys
 import sqlite3
 import chardet
 import threading
+import sys
 
 charset = None
 global_conn = None
 begin_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
 db_name = f"{begin_time}_dns_queries.db"
 
-capture_notification_interval = 2  # 每隔10秒输出一次统计信息
+capture_notification_interval = 1  # 每隔1秒输出一次统计信息
 
 # ================ 信息输出部分 =================
 # 单独开一个线程每隔一段时间输出统计信息
 def thr_periodic_notification():
     while True:
         time.sleep(capture_notification_interval)
+        # 清屏
+        print("\033c", end="")
         print(f"[*] Time: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}")
         count_query_by_dns_server()
 
