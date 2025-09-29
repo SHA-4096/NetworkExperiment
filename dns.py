@@ -6,13 +6,14 @@ import sqlite3
 import chardet
 import threading
 import sys
+import os
 
 charset = None
 global_conn = None
 begin_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
 db_name = f"{begin_time}_dns_queries.db"
 
-capture_notification_interval = 1  # 每隔1秒输出一次统计信息
+capture_notification_interval = 5  # 每隔5秒输出一次统计信息
 
 # ================ 信息输出部分 =================
 # 单独开一个线程每隔一段时间输出统计信息
@@ -130,7 +131,14 @@ def main():
     finally:
         close_connection()
         print("[*] DNS capture stopped.")
-        print(f"[*] Begin time(local): {begin_time} | End time(local): {time.strftime('%Y%m%d_%H%M%S', time.localtime())}")
+        end_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+        print(f"[*] Begin time(local): {begin_time} | End time(local): {end_time}")
+        db_name_new = f"{begin_time}-{end_time}_dns_queries.db"
+        # rename
+        global db_name
+        tmp_name = db_name
+        db_name = db_name_new
+        os.rename(tmp_name, db_name_new)
         print(f"[*] Database file: {db_name}")
         count_query_by_dns_server()
 
