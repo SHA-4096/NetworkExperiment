@@ -59,7 +59,7 @@ def packet_callback(packet):
     # 确保这是一个DNS查询
         if packet[DNS].qr == 0:  # qr=0表示这是一个查询
             # 获取查询的域名
-            query_name = str(packet[DNSQR].qname.decode('utf-8'))
+            query_name = str(packet[DNSQR].qname.decode())
             # 获取查询类型
             query_type = str(packet[DNSQR].qtype)
             # 获取源IP和目标IP
