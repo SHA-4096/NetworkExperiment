@@ -76,6 +76,7 @@ def store_query(src_ip_in, dst_ip_in, query_type_in):
             # print("[*] Query stored successfully.")
             done = True
         except Exception as e:
+            open_connection()
             print(f"[!] Error storing query: {e}")
             time.sleep(1)  # 等待一秒后重试
 
