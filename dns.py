@@ -13,7 +13,7 @@ global_conn = None
 begin_time = time.strftime('%Y%m%d_%H%M%S', time.localtime())
 db_name = f"{begin_time}_dns_queries.db"
 
-capture_notification_interval = 5  # 每隔5秒输出一次统计信息
+capture_notification_interval = 3600  # 每隔1小时输出一次统计信息
 
 # ================ 信息输出部分 =================
 # 单独开一个线程每隔一段时间输出统计信息
@@ -62,15 +62,22 @@ def close_connection():
     print("[*] Database connection closed.")
 
 def store_query(src_ip_in, dst_ip_in, query_type_in):
-    # print("[*] Storing query in database...")
-    global global_conn
-    c = global_conn.cursor()
-    c.execute(f'''
-        INSERT INTO dns_queries (src_ip, dst_ip, query_type)
-        VALUES (?, ?, ?)
-    ''', (src_ip_in, dst_ip_in,  query_type_in))
-    global_conn.commit()
-    # print("[*] Query stored successfully.")
+    done = False
+    while not done:
+        try:
+            # print("[*] Storing query in database...")
+            global global_conn
+            c = global_conn.cursor()
+            c.execute(f'''
+                INSERT INTO dns_queries (src_ip, dst_ip, query_type)
+                VALUES (?, ?, ?)
+            ''', (src_ip_in, dst_ip_in,  query_type_in))
+            global_conn.commit()
+            # print("[*] Query stored successfully.")
+            done = True
+        except Exception as e:
+            print(f"[!] Error storing query: {e}")
+            time.sleep(1)  # 等待一秒后重试
 
 def count_query_by_dns_server():
     # 统计每个DNS服务器的查询次数，从高到低排序并输出
